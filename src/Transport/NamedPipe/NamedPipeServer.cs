@@ -68,7 +68,9 @@ namespace InoIPC
                server = new NamedPipeServerStream
                (
                   pipeName, PipeDirection.InOut,
-                  NamedPipeServerStream.MaxAllowedServerInstances
+                  NamedPipeServerStream.MaxAllowedServerInstances,
+                  PipeTransmissionMode.Byte,
+                  PipeOptions.Asynchronous
                );
 
                server.WaitForConnectionAsync(cts.Token).Wait();
@@ -119,7 +121,6 @@ namespace InoIPC
       public void Dispose()
       {
          Stop();
-         cts?.Dispose();
       }
 
    #endregion
