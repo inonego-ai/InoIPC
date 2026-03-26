@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace InoIPC
 {
@@ -38,10 +39,26 @@ namespace InoIPC
       // ----------------------------------------------------------------------
       /// <summary>
       /// <br/> Starts accepting connections. Blocks the calling thread.
-      /// <br/> Each client is handled in a ThreadPool thread.
+      /// <br/> Each client is handled synchronously in a ThreadPool thread.
       /// </summary>
       // ----------------------------------------------------------------------
       public void Start(Action<IpcConnection> onClient)
+      {
+         Start(conn =>
+         {
+            onClient(conn);
+            return Task.CompletedTask;
+         });
+      }
+
+      // ----------------------------------------------------------------------
+      /// <summary>
+      /// <br/> Starts accepting connections. Blocks the calling thread.
+      /// <br/> Each client is handled asynchronously — transport stays
+      /// <br/> alive until the returned Task completes.
+      /// </summary>
+      // ----------------------------------------------------------------------
+      public void Start(Func<IpcConnection, Task> onClient)
       {
          listener = new TcpListener(IPAddress.Parse(host), port);
          listener.Start();
@@ -56,16 +73,13 @@ namespace InoIPC
 
                var transport = new TcpTransport(client);
 
-               ThreadPool.QueueUserWorkItem
-               (
-                  _ =>
+               _ = Task.Run(async () =>
+               {
+                  using (transport)
                   {
-                     using (transport)
-                     {
-                        onClient(new IpcConnection(transport));
-                     }
+                     await onClient(new IpcConnection(transport));
                   }
-               );
+               });
             }
             catch (SocketException)
             {

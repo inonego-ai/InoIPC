@@ -62,6 +62,7 @@ Console.WriteLine(response.RawJson);    // {"success":true,"message":"pong"}
 ### 서버
 
 ```csharp
+// 동기
 var server = new NamedPipeServer("my-service");
 
 server.Start(conn =>
@@ -69,6 +70,15 @@ server.Start(conn =>
    string request = conn.Receive();
 
    conn.Send(IpcResponse.Success("pong"));
+});
+
+// 비동기 — Task 완료까지 transport 유지
+server.Start(async conn =>
+{
+   string request = conn.Receive();
+   string result  = await ProcessAsync(request);
+
+   conn.Send(result);
 });
 ```
 

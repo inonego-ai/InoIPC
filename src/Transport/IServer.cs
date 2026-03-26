@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace InoIPC
 {
@@ -11,6 +12,8 @@ namespace InoIPC
    {
 
       void Start(Action<IpcConnection> onClient);
+
+      void Start(Func<IpcConnection, Task> onClient);
 
       void Stop();
 

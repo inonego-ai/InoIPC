@@ -62,6 +62,7 @@ Console.WriteLine(response.RawJson);    // {"success":true,"message":"pong"}
 ### Server
 
 ```csharp
+// Synchronous
 var server = new NamedPipeServer("my-service");
 
 server.Start(conn =>
@@ -69,6 +70,15 @@ server.Start(conn =>
    string request = conn.Receive();
 
    conn.Send(IpcResponse.Success("pong"));
+});
+
+// Asynchronous — transport stays alive until Task completes
+server.Start(async conn =>
+{
+   string request = conn.Receive();
+   string result  = await ProcessAsync(request);
+
+   conn.Send(result);
 });
 ```
 

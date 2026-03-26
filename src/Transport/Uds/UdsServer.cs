@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace InoIPC
 {
@@ -37,11 +38,26 @@ namespace InoIPC
       // ----------------------------------------------------------------------
       /// <summary>
       /// <br/> Starts accepting connections. Blocks the calling thread.
-      /// <br/> Each client is handled in a ThreadPool thread.
-      /// <br/> Cleans up socket file on stop.
+      /// <br/> Each client is handled synchronously in a ThreadPool thread.
       /// </summary>
       // ----------------------------------------------------------------------
       public void Start(Action<IpcConnection> onClient)
+      {
+         Start(conn =>
+         {
+            onClient(conn);
+            return Task.CompletedTask;
+         });
+      }
+
+      // ----------------------------------------------------------------------
+      /// <summary>
+      /// <br/> Starts accepting connections. Blocks the calling thread.
+      /// <br/> Each client is handled asynchronously — transport stays
+      /// <br/> alive until the returned Task completes.
+      /// </summary>
+      // ----------------------------------------------------------------------
+      public void Start(Func<IpcConnection, Task> onClient)
       {
          // Clean stale socket file
          if (File.Exists(socketPath))
@@ -68,16 +84,13 @@ namespace InoIPC
 
                var transport = new UdsTransport(client);
 
-               ThreadPool.QueueUserWorkItem
-               (
-                  _ =>
+               _ = Task.Run(async () =>
+               {
+                  using (transport)
                   {
-                     using (transport)
-                     {
-                        onClient(new IpcConnection(transport));
-                     }
+                     await onClient(new IpcConnection(transport));
                   }
-               );
+               });
             }
             catch (SocketException)
             {

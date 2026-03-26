@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace InoIPC
 {
@@ -13,7 +14,7 @@ namespace InoIPC
 
    #region Fields
 
-      private Action<IpcConnection> onClient;
+      private Func<IpcConnection, Task> onClient;
       private volatile bool running;
 
    #endregion
@@ -27,6 +28,21 @@ namespace InoIPC
       /// </summary>
       // ----------------------------------------------------------------------
       public void Start(Action<IpcConnection> onClient)
+      {
+         Start(conn =>
+         {
+            onClient(conn);
+            return Task.CompletedTask;
+         });
+      }
+
+      // ----------------------------------------------------------------------
+      /// <summary>
+      /// <br/> Registers the async client handler. Does not block.
+      /// <br/> Use Accept() to simulate a client connection.
+      /// </summary>
+      // ----------------------------------------------------------------------
+      public void Start(Func<IpcConnection, Task> onClient)
       {
          this.onClient = onClient;
          this.running  = true;
@@ -63,7 +79,7 @@ namespace InoIPC
          var transport  = new TestTransport();
          var connection = new IpcConnection(transport);
 
-         onClient(connection);
+         onClient(connection).Wait();
 
          return transport;
       }
